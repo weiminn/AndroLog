@@ -1,11 +1,15 @@
 package com.jordansamhi.androlog;
 
 import com.jordansamhi.androspecter.printers.Writer;
+import com.jordansamhi.androspecter.printers.Writer2;
+
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,6 +25,7 @@ public class ApkPreparator {
     private final String apksignerPath;
     private final String zipalignPath;
     private final String apkPath;
+    private final Writer2 writer;
 
     /**
      * Initializes the ApkPreparator with the path of the APK to be processed.
@@ -28,14 +33,15 @@ public class ApkPreparator {
      *
      * @param apkPath The file path of the APK to be prepared.
      */
-    public ApkPreparator(String apkPath) {
+    public ApkPreparator(String apkPath, Writer2 writer) {
+        this.writer = writer;
         this.apkPath = apkPath;
         Properties props = new Properties();
         InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties");
         try {
             props.load(input);
         } catch (Exception e) {
-            Writer.v().perror("Problem with config file.");
+            this.writer.perror("Problem with config file.");
         }
 
         this.apksignerPath = props.getProperty("apksignerPath");
@@ -90,7 +96,7 @@ public class ApkPreparator {
                 Files.delete(idsigPath);
             }
         } catch (IOException e) {
-            Writer.v().perror("Problem with deleting the .idsig file: " + e.getMessage());
+            this.writer.perror("Problem with deleting the .idsig file: " + e.getMessage());
         }
     }
 
@@ -131,7 +137,11 @@ public class ApkPreparator {
 
             process.waitFor();
         } catch (Exception e) {
-            Writer.v().perror(String.format("Problem with the execution of the command: %s", command));
+            this.writer.perror(String.format("Problem with the execution of the command: %s", command));
+
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            this.writer.perror(sw.toString());
         }
     }
 
@@ -155,7 +165,7 @@ public class ApkPreparator {
             keystore = new File(targetDir, "keystore.keystore");
             FileUtils.copyInputStreamToFile(isKeystore, keystore);
         } catch (Exception e) {
-            Writer.v().perror("Problem with the keystore");
+            this.writer.perror("Problem with the keystore");
         }
         return keystore != null ? keystore.getAbsolutePath() : null;
     }
@@ -172,7 +182,7 @@ public class ApkPreparator {
             Files.move(Paths.get(newPath), Paths.get(apkPath), StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            Writer.v().perror("Problem with the replacement of the new APK");
+            this.writer.perror("Problem with the replacement of the new APK");
         }
     }
 }
